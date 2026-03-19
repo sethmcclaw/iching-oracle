@@ -4,64 +4,268 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>I Ching Oracle</title>
+  <meta name="description" content="Cast an I Ching reading with 6 lines, changing lines, deep interpretation, and shareable links." />
   <style>
-    :root { --bg:#0b1020; --card:#121933; --text:#e9ecf8; --muted:#aab2d5; --accent:#7aa2ff; --accent2:#7ee0c2; }
+    :root {
+      --paper: #f4ead6;
+      --paper-2: #efe1c7;
+      --ink: #1d1f29;
+      --indigo: #15203f;
+      --indigo-2: #1e2d57;
+      --gold: #cfa54f;
+      --gold-soft: #dfc488;
+      --seal: #b3473a;
+      --wave: #2f6fa7;
+      --wave-2: #5e8fba;
+    }
+
     * { box-sizing: border-box; }
-    body { margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:linear-gradient(120deg,#0a0f1f,#111a36); color:var(--text); }
-    .wrap { max-width: 920px; margin: 0 auto; padding: 22px; }
-    .card { background: rgba(18,25,51,.92); border:1px solid #26305f; border-radius:16px; padding:18px; margin-bottom:14px; }
-    h1 { margin:0 0 8px; font-size: 30px; }
-    p { color:var(--muted); margin:6px 0; }
-    textarea { width:100%; min-height:88px; border-radius:12px; border:1px solid #33407a; background:#0e1530; color:var(--text); padding:12px; font-size:15px; }
-    button { border:0; border-radius:10px; padding:12px 16px; background:var(--accent); color:#08102c; font-weight:700; cursor:pointer; margin-top:10px; }
-    button.secondary { background:#2a366d; color:#deebff; border:1px solid #43529b; }
-    button.ghost { background:transparent; color:#deebff; border:1px solid #43529b; }
-    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-    .status { font-size:13px; color:var(--accent2); margin-top:8px; min-height:18px; }
-    .hex { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height:1.5; font-size:20px; letter-spacing:1px; }
-    .grid { display:grid; grid-template-columns:1fr; gap:14px; }
-    @media (min-width: 760px){ .grid{grid-template-columns:1fr 1fr;} }
-    .k { color:#9fb0ec; font-size: 13px; text-transform: uppercase; letter-spacing:.08em; }
-    .v { margin-top:4px; }
-    .pill { display:inline-block; border:1px solid #43529b; border-radius:999px; padding:4px 10px; margin-right:8px; margin-bottom:8px; color:#bfd0ff; font-size:13px; }
-    .small { font-size:13px; color:#aab2d5; }
-    .name { font-size:19px; font-weight:700; color:#eaf0ff; margin-bottom:8px; }
-    .deep h3 { margin:14px 0 8px; font-size:16px; color:#eaf0ff; }
-    .deep ul { margin:8px 0 8px 18px; padding:0; }
-    .deep li { margin:4px 0; color:#c8d2fa; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Noto Serif", Georgia, Cambria, serif;
+      background:
+        radial-gradient(circle at 15% 12%, rgba(207,165,79,.16), transparent 28%),
+        radial-gradient(circle at 83% 82%, rgba(47,111,167,.16), transparent 28%),
+        linear-gradient(180deg, var(--paper), var(--paper-2));
+    }
+
+    .wrap { max-width: 980px; margin: 0 auto; padding: 20px 16px 34px; }
+
+    .frame {
+      position: relative;
+      border: 1px solid rgba(183, 145, 70, .55);
+      border-radius: 16px;
+      background: rgba(255,255,255,.35);
+      box-shadow: 0 16px 34px rgba(12,18,38,.12);
+      padding: 14px;
+      overflow: hidden;
+    }
+
+    .frame::before,
+    .frame::after {
+      content: "";
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border: 1px solid rgba(207,165,79,.45);
+      pointer-events: none;
+    }
+    .frame::before { left: 8px; top: 8px; border-right: 0; border-bottom: 0; border-top-left-radius: 10px; }
+    .frame::after { right: 8px; bottom: 8px; border-left: 0; border-top: 0; border-bottom-right-radius: 10px; }
+
+    .hero {
+      background: linear-gradient(165deg, var(--indigo) 0%, var(--indigo-2) 58%, #304878 100%);
+      color: #eef3ff;
+      border-radius: 12px;
+      padding: 18px 16px;
+      border: 1px solid rgba(223,196,136,.35);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: 30px;
+      letter-spacing: .4px;
+      font-weight: 700;
+    }
+    .hero p {
+      margin: 8px 0 0;
+      color: #d8e2ff;
+      font-size: 15px;
+    }
+    .seal {
+      margin-top: 12px;
+      display: inline-block;
+      border: 1px solid rgba(255,255,255,.35);
+      background: rgba(179,71,58,.9);
+      color: #ffe8e2;
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .hero-art {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      opacity: .22;
+      width: 180px;
+      height: 180px;
+      pointer-events: none;
+    }
+
+    .card {
+      border: 1px solid rgba(161,123,56,.5);
+      border-radius: 12px;
+      background: rgba(255,255,255,.52);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .card .head {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(161,123,56,.35);
+      background: linear-gradient(90deg, rgba(207,165,79,.16), rgba(207,165,79,.04));
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #513b17;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card .body { padding: 12px; }
+
+    textarea {
+      width: 100%;
+      min-height: 94px;
+      border-radius: 10px;
+      border: 1px solid rgba(58,71,116,.35);
+      background: rgba(252,249,242,.95);
+      color: #1e2232;
+      padding: 12px;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 15px;
+    }
+
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    button {
+      border: 1px solid #9b7840;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #d8b672, #be9348);
+      color: #2a1b03;
+      font-weight: 700;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 13px;
+    }
+    button.secondary { background: #f8f2e4; color: #3a2a12; }
+    button.ghost { background: #eef4ff; color: #1d2f5f; border-color: #8da3d1; }
+
+    .status { min-height: 18px; margin-top: 8px; font-size: 13px; color: #1f6a57; font-family: Inter, system-ui, sans-serif; }
+    .small { margin-top: 8px; color: #63573f; font-size: 12px; font-family: Inter, system-ui, sans-serif; }
+
+    .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 760px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+    .hex { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 20px; line-height: 1.5; margin: 8px 0 0; color: #171d35; }
+    .name { font-size: 18px; font-weight: 700; color: #1d1f2f; margin-bottom: 8px; }
+    .pill {
+      display: inline-block;
+      border: 1px solid #b48e52;
+      background: rgba(243,234,213,.8);
+      border-radius: 999px;
+      padding: 4px 10px;
+      margin: 0 6px 6px 0;
+      font-size: 12px;
+      color: #48351a;
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    .deep h3 { margin: 12px 0 8px; font-size: 16px; color: #1d2238; }
+    .deep p { margin: 6px 0; color: #2f3346; }
+    .deep ul { margin: 8px 0 8px 18px; padding: 0; }
+    .deep li { margin: 4px 0; color: #2f3346; }
+
+    .motif-strip {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+      opacity: .9;
+    }
+    .motif {
+      border: 1px solid rgba(161,123,56,.4);
+      border-radius: 10px;
+      background: rgba(255,255,255,.45);
+      display: grid;
+      place-items: center;
+      min-height: 42px;
+      color: #a0722c;
+      font-size: 18px;
+    }
+
+    .footer-note {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #695a3f;
+      font-family: Inter, system-ui, sans-serif;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
-      <h1>I Ching Oracle</h1>
-      <p>Ask your question, then cast 6 lines. Uses traditional 3-coin probabilities (6,7,8,9) with changing lines.</p>
-      <textarea id="q" placeholder="Type your question here..."></textarea>
-      <div class="actions">
-        <button id="castBtn">Cast Hexagram</button>
-        <button id="copyBtn" class="secondary">Copy Share Link</button>
-        <button id="shareXBtn" class="ghost">Share on X</button>
+    <div class="frame">
+      <div class="hero">
+        <svg class="hero-art" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="132" cy="92" r="62" stroke="#F7E2B2" stroke-width="2"/>
+          <path d="M54 154c22-2 26-16 38-16s18 8 29 8 19-10 31-10 17 6 24 8" stroke="#F7E2B2" stroke-width="2" stroke-linecap="round"/>
+          <path d="M56 164c22-2 26-16 38-16s18 8 29 8 19-10 31-10 17 6 24 8" stroke="#F7E2B2" stroke-width="2" stroke-linecap="round"/>
+          <path d="M98 73c5-12 11-18 21-21M120 50c11 2 16 8 22 18" stroke="#F7E2B2" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <h1>I Ching Oracle</h1>
+        <p>Redesign inspired by your references: traditional motif language, poster-style serenity, and cleaner storytelling flow.</p>
+        <span class="seal">Ritual Mode</span>
       </div>
-      <div id="shareStatus" class="status"></div>
-      <p class="small">Line legend: yin broken, yang solid, x = old yin (changing), o = old yang (changing).</p>
-    </div>
 
-    <div class="grid">
       <div class="card">
-        <div class="k">Primary Hexagram</div>
-        <div id="primaryMeta" class="v"></div>
-        <pre id="primaryHex" class="hex"></pre>
-      </div>
-      <div class="card">
-        <div class="k">Relating Hexagram (after changing lines)</div>
-        <div id="relMeta" class="v"></div>
-        <pre id="relHex" class="hex"></pre>
-      </div>
-    </div>
+        <div class="head">Question</div>
+        <div class="body">
+          <textarea id="q" placeholder="Type your question here..."></textarea>
+          <div class="actions">
+            <button id="castBtn">Cast Hexagram</button>
+            <button id="copyBtn" class="secondary">Copy Share Link</button>
+            <button id="shareXBtn" class="ghost">Share on X</button>
+          </div>
+          <div id="shareStatus" class="status"></div>
+          <div class="small">Line legend: yin broken, yang solid, x = old yin (changing), o = old yang (changing).</div>
 
-    <div class="card">
-      <div class="k">Interpretation</div>
-      <div id="interp" class="v deep"></div>
+          <div class="motif-strip" aria-hidden="true">
+            <div class="motif">☾</div>
+            <div class="motif">☼</div>
+            <div class="motif">✦</div>
+            <div class="motif">☁</div>
+            <div class="motif">❂</div>
+            <div class="motif">✺</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <div class="head">Primary Hexagram</div>
+          <div class="body">
+            <div id="primaryMeta"></div>
+            <pre id="primaryHex" class="hex"></pre>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="head">Relating Hexagram (after changing lines)</div>
+          <div class="body">
+            <div id="relMeta"></div>
+            <pre id="relHex" class="hex"></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head">Interpretation</div>
+        <div class="body">
+          <div id="interp" class="deep"></div>
+        </div>
+      </div>
+
+      <div class="footer-note">Built for reflection. Not deterministic prediction.</div>
     </div>
   </div>
 
@@ -77,7 +281,7 @@ const trigramByBits = {
   "000": { name:"Earth (Kun)", meaning:"receptivity and support" }
 };
 
-const trigramOrder = ["111","110","101","100","011","010","001","000"]; // Heaven, Lake, Fire, Thunder, Wind, Water, Mountain, Earth
+const trigramOrder = ["111","110","101","100","011","010","001","000"];
 
 const kingWenMatrix = [
   [1, 43, 14, 34, 9, 5, 26, 11],
@@ -91,70 +295,38 @@ const kingWenMatrix = [
 ];
 
 const HEXAGRAMS = {
-  1:  { name:"The Creative", meaning:"Pure yang. Initiate boldly with integrity." },
-  2:  { name:"The Receptive", meaning:"Support, receive, and cultivate what is growing." },
-  3:  { name:"Difficulty at the Beginning", meaning:"Early chaos. Build structure one step at a time." },
-  4:  { name:"Youthful Folly", meaning:"Learn humbly. Seek guidance before forcing progress." },
-  5:  { name:"Waiting", meaning:"Prepare well and wait for right timing." },
-  6:  { name:"Conflict", meaning:"Clarify principles. Avoid unnecessary escalation." },
-  7:  { name:"The Army", meaning:"Discipline and coordinated effort bring success." },
-  8:  { name:"Holding Together", meaning:"Unite with trustworthy allies and shared purpose." },
-  9:  { name:"Small Taming", meaning:"Gentle pressure and consistency shape outcomes." },
-  10: { name:"Treading", meaning:"Proceed carefully in high-stakes terrain." },
-  11: { name:"Peace", meaning:"Heaven and earth align. Use harmony productively." },
-  12: { name:"Standstill", meaning:"Blocked flow. Protect values and conserve energy." },
-  13: { name:"Fellowship", meaning:"Open collaboration around clear ideals." },
-  14: { name:"Great Possession", meaning:"Abundance requires stewardship, not ego." },
-  15: { name:"Modesty", meaning:"Humility increases influence and durability." },
-  16: { name:"Enthusiasm", meaning:"Mobilize momentum, but ground it in planning." },
-  17: { name:"Following", meaning:"Adapt intelligently to what is truly moving." },
-  18: { name:"Work on the Decayed", meaning:"Repair old patterns at the root." },
-  19: { name:"Approach", meaning:"Opportunity nears. Act with care and generosity." },
-  20: { name:"Contemplation", meaning:"Observe deeply before deciding your next move." },
-  21: { name:"Biting Through", meaning:"Cut through obstruction with decisive clarity." },
-  22: { name:"Grace", meaning:"Refine presentation without hiding the truth." },
-  23: { name:"Splitting Apart", meaning:"Let go of what can no longer hold." },
-  24: { name:"Return", meaning:"Cycle renews. Come back to essentials." },
-  25: { name:"Innocence", meaning:"Act sincerely, without hidden agenda." },
-  26: { name:"Great Taming", meaning:"Store strength. Timing matters more than force." },
-  27: { name:"Nourishment", meaning:"Feed body, mind, and systems with quality." },
-  28: { name:"Great Preponderance", meaning:"Heavy load. Reinforce weak supports now." },
-  29: { name:"The Abysmal (Water)", meaning:"Face repeated risk with steady courage." },
-  30: { name:"The Clinging (Fire)", meaning:"Clarity and attachment. Illuminate what matters." },
-  31: { name:"Influence", meaning:"Mutual attraction. Lead through resonance, not pressure." },
-  32: { name:"Duration", meaning:"Commit to rhythms that can last." },
-  33: { name:"Retreat", meaning:"Strategic withdrawal protects long-term position." },
-  34: { name:"Great Power", meaning:"Use strength responsibly and with restraint." },
-  35: { name:"Progress", meaning:"Visibility rises. Advance with integrity." },
-  36: { name:"Darkening of the Light", meaning:"Protect your inner fire in hostile conditions." },
-  37: { name:"The Family", meaning:"Roles and responsibilities create order." },
-  38: { name:"Opposition", meaning:"Difference can be productive with clear boundaries." },
-  39: { name:"Obstruction", meaning:"Pause, reroute, and seek support." },
-  40: { name:"Deliverance", meaning:"Release tension and simplify commitments." },
-  41: { name:"Decrease", meaning:"Conscious reduction creates focus and strength." },
-  42: { name:"Increase", meaning:"Direct gains toward meaningful growth." },
-  43: { name:"Breakthrough", meaning:"Declare truth clearly and act decisively." },
-  44: { name:"Coming to Meet", meaning:"A strong influence appears. Stay discerning." },
-  45: { name:"Gathering Together", meaning:"Concentration of people and resources." },
-  46: { name:"Pushing Upward", meaning:"Steady effort brings gradual elevation." },
-  47: { name:"Oppression", meaning:"Constraint tests spirit. Simplify and endure." },
-  48: { name:"The Well", meaning:"Return to the source and maintain it." },
-  49: { name:"Revolution", meaning:"Transform when timing and truth align." },
-  50: { name:"The Cauldron", meaning:"Inner refinement creates shared nourishment." },
-  51: { name:"The Arousing (Thunder)", meaning:"Shock awakens. Respond with composure." },
-  52: { name:"Keeping Still (Mountain)", meaning:"Stop, center, and reset your perspective." },
-  53: { name:"Development", meaning:"Gradual progress builds lasting results." },
-  54: { name:"The Marrying Maiden", meaning:"Limited leverage. Act with realism and dignity." },
-  55: { name:"Abundance", meaning:"Peak intensity. Use the moment wisely." },
-  56: { name:"The Wanderer", meaning:"Stay adaptable and principled in transit." },
-  57: { name:"The Gentle (Wind)", meaning:"Persistent subtle influence outperforms force." },
-  58: { name:"The Joyous (Lake)", meaning:"Open exchange and sincere communication." },
-  59: { name:"Dispersion", meaning:"Dissolve rigidity; reconnect through shared purpose." },
-  60: { name:"Limitation", meaning:"Healthy limits create freedom and reliability." },
-  61: { name:"Inner Truth", meaning:"Align outer action with inner sincerity." },
-  62: { name:"Small Preponderance", meaning:"Favor careful details over grand moves." },
-  63: { name:"After Completion", meaning:"Success reached. Maintain vigilance and balance." },
-  64: { name:"Before Completion", meaning:"Transition phase. Finish with patience and precision." }
+  1:{name:"The Creative",meaning:"Pure yang. Initiate boldly with integrity."},2:{name:"The Receptive",meaning:"Support, receive, and cultivate what is growing."},
+  3:{name:"Difficulty at the Beginning",meaning:"Early chaos. Build structure one step at a time."},4:{name:"Youthful Folly",meaning:"Learn humbly. Seek guidance before forcing progress."},
+  5:{name:"Waiting",meaning:"Prepare well and wait for right timing."},6:{name:"Conflict",meaning:"Clarify principles. Avoid unnecessary escalation."},
+  7:{name:"The Army",meaning:"Discipline and coordinated effort bring success."},8:{name:"Holding Together",meaning:"Unite with trustworthy allies and shared purpose."},
+  9:{name:"Small Taming",meaning:"Gentle pressure and consistency shape outcomes."},10:{name:"Treading",meaning:"Proceed carefully in high-stakes terrain."},
+  11:{name:"Peace",meaning:"Heaven and earth align. Use harmony productively."},12:{name:"Standstill",meaning:"Blocked flow. Protect values and conserve energy."},
+  13:{name:"Fellowship",meaning:"Open collaboration around clear ideals."},14:{name:"Great Possession",meaning:"Abundance requires stewardship, not ego."},
+  15:{name:"Modesty",meaning:"Humility increases influence and durability."},16:{name:"Enthusiasm",meaning:"Mobilize momentum, but ground it in planning."},
+  17:{name:"Following",meaning:"Adapt intelligently to what is truly moving."},18:{name:"Work on the Decayed",meaning:"Repair old patterns at the root."},
+  19:{name:"Approach",meaning:"Opportunity nears. Act with care and generosity."},20:{name:"Contemplation",meaning:"Observe deeply before deciding your next move."},
+  21:{name:"Biting Through",meaning:"Cut through obstruction with decisive clarity."},22:{name:"Grace",meaning:"Refine presentation without hiding the truth."},
+  23:{name:"Splitting Apart",meaning:"Let go of what can no longer hold."},24:{name:"Return",meaning:"Cycle renews. Come back to essentials."},
+  25:{name:"Innocence",meaning:"Act sincerely, without hidden agenda."},26:{name:"Great Taming",meaning:"Store strength. Timing matters more than force."},
+  27:{name:"Nourishment",meaning:"Feed body, mind, and systems with quality."},28:{name:"Great Preponderance",meaning:"Heavy load. Reinforce weak supports now."},
+  29:{name:"The Abysmal (Water)",meaning:"Face repeated risk with steady courage."},30:{name:"The Clinging (Fire)",meaning:"Clarity and attachment. Illuminate what matters."},
+  31:{name:"Influence",meaning:"Mutual attraction. Lead through resonance, not pressure."},32:{name:"Duration",meaning:"Commit to rhythms that can last."},
+  33:{name:"Retreat",meaning:"Strategic withdrawal protects long-term position."},34:{name:"Great Power",meaning:"Use strength responsibly and with restraint."},
+  35:{name:"Progress",meaning:"Visibility rises. Advance with integrity."},36:{name:"Darkening of the Light",meaning:"Protect your inner fire in hostile conditions."},
+  37:{name:"The Family",meaning:"Roles and responsibilities create order."},38:{name:"Opposition",meaning:"Difference can be productive with clear boundaries."},
+  39:{name:"Obstruction",meaning:"Pause, reroute, and seek support."},40:{name:"Deliverance",meaning:"Release tension and simplify commitments."},
+  41:{name:"Decrease",meaning:"Conscious reduction creates focus and strength."},42:{name:"Increase",meaning:"Direct gains toward meaningful growth."},
+  43:{name:"Breakthrough",meaning:"Declare truth clearly and act decisively."},44:{name:"Coming to Meet",meaning:"A strong influence appears. Stay discerning."},
+  45:{name:"Gathering Together",meaning:"Concentration of people and resources."},46:{name:"Pushing Upward",meaning:"Steady effort brings gradual elevation."},
+  47:{name:"Oppression",meaning:"Constraint tests spirit. Simplify and endure."},48:{name:"The Well",meaning:"Return to the source and maintain it."},
+  49:{name:"Revolution",meaning:"Transform when timing and truth align."},50:{name:"The Cauldron",meaning:"Inner refinement creates shared nourishment."},
+  51:{name:"The Arousing (Thunder)",meaning:"Shock awakens. Respond with composure."},52:{name:"Keeping Still (Mountain)",meaning:"Stop, center, and reset your perspective."},
+  53:{name:"Development",meaning:"Gradual progress builds lasting results."},54:{name:"The Marrying Maiden",meaning:"Limited leverage. Act with realism and dignity."},
+  55:{name:"Abundance",meaning:"Peak intensity. Use the moment wisely."},56:{name:"The Wanderer",meaning:"Stay adaptable and principled in transit."},
+  57:{name:"The Gentle (Wind)",meaning:"Persistent subtle influence outperforms force."},58:{name:"The Joyous (Lake)",meaning:"Open exchange and sincere communication."},
+  59:{name:"Dispersion",meaning:"Dissolve rigidity; reconnect through shared purpose."},60:{name:"Limitation",meaning:"Healthy limits create freedom and reliability."},
+  61:{name:"Inner Truth",meaning:"Align outer action with inner sincerity."},62:{name:"Small Preponderance",meaning:"Favor careful details over grand moves."},
+  63:{name:"After Completion",meaning:"Success reached. Maintain vigilance and balance."},64:{name:"Before Completion",meaning:"Transition phase. Finish with patience and precision."}
 };
 
 let lastReading = null;
@@ -179,19 +351,12 @@ function lineFromRaw(raw) {
 function trigramInfo(bitsBottomToTop) {
   const lowerBits = bitsBottomToTop.slice(0,3).join("");
   const upperBits = bitsBottomToTop.slice(3,6).join("");
-  return {
-    lowerBits,
-    upperBits,
-    lower: trigramByBits[lowerBits],
-    upper: trigramByBits[upperBits]
-  };
+  return { lowerBits, upperBits, lower: trigramByBits[lowerBits], upper: trigramByBits[upperBits] };
 }
 
 function kingWenNumber(bitsBottomToTop) {
   const { lowerBits, upperBits } = trigramInfo(bitsBottomToTop);
-  const upperIndex = trigramOrder.indexOf(upperBits);
-  const lowerIndex = trigramOrder.indexOf(lowerBits);
-  return kingWenMatrix[upperIndex][lowerIndex];
+  return kingWenMatrix[trigramOrder.indexOf(upperBits)][trigramOrder.indexOf(lowerBits)];
 }
 
 function formatHex(linesBottomToTop) {
@@ -200,51 +365,41 @@ function formatHex(linesBottomToTop) {
 
 function metaHTML(number, tri) {
   const hex = HEXAGRAMS[number];
-  return `
-    <div class="name">#${number} ${hex.name}</div>
+  return `<div class="name">#${number} ${hex.name}</div>
     <span class="pill">Upper: ${tri.upper.name}</span>
     <span class="pill">Lower: ${tri.lower.name}</span>
-    <span class="pill">Core: ${hex.meaning}</span>
-  `;
+    <span class="pill">Core: ${hex.meaning}</span>`;
 }
 
 function changingTone(count) {
-  if (count === 0) return "No changing lines: this pattern is stable. Your answer is in the core hexagram itself.";
-  if (count <= 2) return "Few changing lines: this is a focused shift. Pay attention to a small leverage point.";
-  if (count <= 4) return "Several changing lines: this is an active transition period. Keep plans adaptive.";
-  return "Many changing lines: expect major flux. Favor principles over fixed tactics.";
+  if (count === 0) return "No changing lines: this pattern is stable. The answer sits in the primary hexagram itself.";
+  if (count <= 2) return "Few changing lines: focused shift. A small adjustment has leverage.";
+  if (count <= 4) return "Several changing lines: active transition. Keep options open and adaptive.";
+  return "Many changing lines: high volatility. Move by principles, not rigid plans.";
 }
 
 function generateDeepInterpretation({ question, pNumber, rNumber, pHex, rHex, pTri, rTri, changingLines }) {
-  const cLinesText = changingLines.length ? changingLines.join(", ") : "none";
-
-  const nowFocus = `Current dynamic is ${pTri.upper.meaning} above ${pTri.lower.meaning}. This suggests you are operating through ${pHex.name.toLowerCase()} energy.`;
-  const shiftFocus = `As lines change, movement goes toward ${rHex.name.toLowerCase()}, with ${rTri.upper.meaning} above ${rTri.lower.meaning}.`;
-
+  const c = changingLines.length ? changingLines.join(', ') : 'none';
   return `
     <p><b>Question:</b> ${question || '(none entered)'}</p>
-
-    <h3>Primary Hexagram - Current Situation</h3>
+    <h3>Primary Hexagram - Current Pattern</h3>
     <p><b>#${pNumber} ${pHex.name}:</b> ${pHex.meaning}</p>
-    <p>${nowFocus}</p>
+    <p>Current dynamic: ${pTri.upper.meaning} above ${pTri.lower.meaning}.</p>
 
-    <h3>Relating Hexagram - Direction of Change</h3>
+    <h3>Relating Hexagram - Where It Is Moving</h3>
     <p><b>#${rNumber} ${rHex.name}:</b> ${rHex.meaning}</p>
-    <p>${shiftFocus}</p>
+    <p>Shift dynamic: ${rTri.upper.meaning} above ${rTri.lower.meaning}.</p>
 
     <h3>Changing Lines</h3>
-    <p><b>Lines:</b> ${cLinesText} (1 = bottom, 6 = top)</p>
+    <p><b>Lines:</b> ${c} (1 = bottom, 6 = top)</p>
     <p>${changingTone(changingLines.length)}</p>
 
     <h3>Practical Guidance</h3>
     <ul>
-      <li><b>Do now:</b> Act in the spirit of <i>${pHex.name}</i>.</li>
-      <li><b>Adjust toward:</b> The outcome quality of <i>${rHex.name}</i>.</li>
-      <li><b>Watch for:</b> Overreaction during transition. Keep decisions principled and timed.</li>
-    </ul>
-
-    <p class="small">Reading tip: primary = where you are, relating = where it is moving, changing lines = how intense the transition is.</p>
-  `;
+      <li><b>Do now:</b> act in the spirit of <i>${pHex.name}</i>.</li>
+      <li><b>Lean toward:</b> the outcome quality of <i>${rHex.name}</i>.</li>
+      <li><b>Avoid:</b> forcing certainty while things are still transforming.</li>
+    </ul>`;
 }
 
 function buildShareUrl() {
@@ -255,79 +410,38 @@ function buildShareUrl() {
   return url.toString();
 }
 
-function setShareStatus(text) {
-  document.getElementById('shareStatus').textContent = text || '';
-}
+function setShareStatus(text) { document.getElementById('shareStatus').textContent = text || ''; }
 
 async function copyShareLink() {
   const url = buildShareUrl();
-  if (!url) {
-    setShareStatus('Cast first, then share.');
-    return;
-  }
-  try {
-    await navigator.clipboard.writeText(url);
-    setShareStatus('Share link copied.');
-  } catch {
-    setShareStatus('Could not copy automatically. Link: ' + url);
-  }
+  if (!url) return setShareStatus('Cast first, then share.');
+  try { await navigator.clipboard.writeText(url); setShareStatus('Share link copied.'); }
+  catch { setShareStatus('Could not copy automatically. Link: ' + url); }
 }
 
 function shareOnX() {
   const url = buildShareUrl();
-  if (!url) {
-    setShareStatus('Cast first, then share.');
-    return;
-  }
-  const text = 'My I Ching reading:';
-  const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+  if (!url) return setShareStatus('Cast first, then share.');
+  const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent('My I Ching reading:')}&url=${encodeURIComponent(url)}`;
   window.open(intent, '_blank', 'noopener,noreferrer');
 }
 
 function renderReading(question, primary) {
-  const relating = primary.map(line => {
-    const flipped = line.changing ? 1 - line.base : line.base;
-    return { base: flipped, symbol: flipped ? "━━━━━━━━" : "━━   ━━" };
-  });
-
-  const pBits = primary.map(l => l.base);
-  const rBits = relating.map(l => l.base);
-
-  const pTri = trigramInfo(pBits);
-  const rTri = trigramInfo(rBits);
-
-  const pNumber = kingWenNumber(pBits);
-  const rNumber = kingWenNumber(rBits);
-
-  const pHex = HEXAGRAMS[pNumber];
-  const rHex = HEXAGRAMS[rNumber];
+  const relating = primary.map(l => ({ base: l.changing ? 1 - l.base : l.base, symbol: (l.changing ? 1 - l.base : l.base) ? "━━━━━━━━" : "━━   ━━" }));
+  const pBits = primary.map(l => l.base), rBits = relating.map(l => l.base);
+  const pTri = trigramInfo(pBits), rTri = trigramInfo(rBits);
+  const pNumber = kingWenNumber(pBits), rNumber = kingWenNumber(rBits);
+  const pHex = HEXAGRAMS[pNumber], rHex = HEXAGRAMS[rNumber];
 
   document.getElementById('primaryMeta').innerHTML = metaHTML(pNumber, pTri);
   document.getElementById('relMeta').innerHTML = metaHTML(rNumber, rTri);
-
   document.getElementById('primaryHex').textContent = formatHex(primary);
   document.getElementById('relHex').textContent = formatHex(relating);
 
-  const changingLines = primary
-    .map((l, i) => l.changing ? i + 1 : null)
-    .filter(Boolean);
+  const changingLines = primary.map((l, i) => l.changing ? i + 1 : null).filter(Boolean);
+  document.getElementById('interp').innerHTML = generateDeepInterpretation({ question, pNumber, rNumber, pHex, rHex, pTri, rTri, changingLines });
 
-  document.getElementById('interp').innerHTML = generateDeepInterpretation({
-    question,
-    pNumber,
-    rNumber,
-    pHex,
-    rHex,
-    pTri,
-    rTri,
-    changingLines
-  });
-
-  lastReading = {
-    q: question || '',
-    raw: primary.map(l => String(l.raw)).join('')
-  };
-
+  lastReading = { q: question || '', raw: primary.map(l => String(l.raw)).join('') };
   const shareUrl = buildShareUrl();
   if (shareUrl) history.replaceState({}, '', shareUrl);
   setShareStatus('Reading updated. Share link ready.');
@@ -335,31 +449,21 @@ function renderReading(question, primary) {
 
 function cast() {
   const q = document.getElementById('q').value.trim();
-  const primary = [];
-  for (let i = 0; i < 6; i++) primary.push(coinLine());
+  const primary = Array.from({length: 6}, coinLine);
   renderReading(q, primary);
 }
 
 function loadFromURLIfPresent() {
-  const params = new URLSearchParams(window.location.search);
-  const castRaw = params.get('cast');
-  const q = params.get('q') || '';
-
+  const p = new URLSearchParams(window.location.search);
+  const castRaw = p.get('cast');
+  const q = p.get('q') || '';
   if (q) document.getElementById('q').value = q;
-
   if (!castRaw) return;
-  if (!/^[6789]{6}$/.test(castRaw)) {
-    setShareStatus('Invalid shared cast format.');
-    return;
-  }
-
+  if (!/^[6789]{6}$/.test(castRaw)) return setShareStatus('Invalid shared cast format.');
   try {
-    const primary = castRaw.split('').map(ch => lineFromRaw(Number(ch)));
-    renderReading(q, primary);
+    renderReading(q, castRaw.split('').map(ch => lineFromRaw(Number(ch))));
     setShareStatus('Loaded reading from shared link.');
-  } catch {
-    setShareStatus('Could not load shared reading.');
-  }
+  } catch { setShareStatus('Could not load shared reading.'); }
 }
 
 document.getElementById('castBtn').addEventListener('click', cast);
