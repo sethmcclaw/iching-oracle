@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>I Ching Oracle</title>
+  <style>
+    :root { --bg:#0b1020; --card:#121933; --text:#e9ecf8; --muted:#aab2d5; --accent:#7aa2ff; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:linear-gradient(120deg,#0a0f1f,#111a36); color:var(--text); }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 22px; }
+    .card { background: rgba(18,25,51,.92); border:1px solid #26305f; border-radius:16px; padding:18px; margin-bottom:14px; }
+    h1 { margin:0 0 8px; font-size: 30px; }
+    p { color:var(--muted); margin:6px 0; }
+    textarea { width:100%; min-height:88px; border-radius:12px; border:1px solid #33407a; background:#0e1530; color:var(--text); padding:12px; font-size:15px; }
+    button { border:0; border-radius:10px; padding:12px 16px; background:var(--accent); color:#08102c; font-weight:700; cursor:pointer; margin-top:10px; }
+    .hex { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height:1.5; font-size:20px; letter-spacing:1px; }
+    .grid { display:grid; grid-template-columns:1fr; gap:14px; }
+    @media (min-width: 760px){ .grid{grid-template-columns:1fr 1fr;} }
+    .k { color:#9fb0ec; font-size: 13px; text-transform: uppercase; letter-spacing:.08em; }
+    .v { margin-top:4px; }
+    .pill { display:inline-block; border:1px solid #43529b; border-radius:999px; padding:4px 10px; margin-right:8px; margin-bottom:8px; color:#bfd0ff; font-size:13px; }
+    .small { font-size:13px; color:#aab2d5; }
+    .name { font-size:19px; font-weight:700; color:#eaf0ff; margin-bottom:8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>I Ching Oracle</h1>
+      <p>Ask your question, then cast 6 lines. Uses traditional 3-coin probabilities (6,7,8,9) with changing lines.</p>
+      <textarea id="q" placeholder="Type your question here..."></textarea>
+      <br />
+      <button id="castBtn">Cast Hexagram</button>
+      <p class="small">Line legend: yin broken, yang solid, x = old yin (changing), o = old yang (changing).</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="k">Primary Hexagram</div>
+        <div id="primaryMeta" class="v"></div>
+        <pre id="primaryHex" class="hex"></pre>
+      </div>
+      <div class="card">
+        <div class="k">Relating Hexagram (after changing lines)</div>
+        <div id="relMeta" class="v"></div>
+        <pre id="relHex" class="hex"></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="k">Interpretation</div>
+      <div id="interp" class="v"></div>
+    </div>
+  </div>
+
+<script>
+const trigramByBits = {
+  "111": { name:"Heaven (Qian)", meaning:"creative force" },
+  "110": { name:"Lake (Dui)", meaning:"joy and communication" },
+  "101": { name:"Fire (Li)", meaning:"clarity and expression" },
+  "100": { name:"Thunder (Zhen)", meaning:"movement and awakening" },
+  "011": { name:"Wind (Xun)", meaning:"gentle influence" },
+  "010": { name:"Water (Kan)", meaning:"depth and risk" },
+  "001": { name:"Mountain (Gen)", meaning:"stillness and boundaries" },
+  "000": { name:"Earth (Kun)", meaning:"receptivity and support" }
+};
+
+const trigramOrder = ["111","110","101","100","011","010","001","000"]; // Heaven, Lake, Fire, Thunder, Wind, Water, Mountain, Earth
+
+const kingWenMatrix = [
+  [1, 43, 14, 34, 9, 5, 26, 11],
+  [10, 58, 38, 54, 61, 60, 41, 19],
+  [13, 49, 30, 55, 37, 63, 22, 36],
+  [25, 17, 21, 51, 42, 3, 27, 24],
+  [44, 28, 50, 32, 57, 48, 18, 46],
+  [6, 47, 64, 40, 59, 29, 4, 7],
+  [33, 31, 56, 62, 53, 39, 52, 15],
+  [12, 45, 35, 16, 20, 8, 23, 2]
+];
+
+const HEXAGRAMS = {
+  1:  { name:"The Creative", meaning:"Pure yang. Initiate boldly with integrity." },
+  2:  { name:"The Receptive", meaning:"Support, receive, and cultivate what is growing." },
+  3:  { name:"Difficulty at the Beginning", meaning:"Early chaos. Build structure one step at a time." },
+  4:  { name:"Youthful Folly", meaning:"Learn humbly. Seek guidance before forcing progress." },
+  5:  { name:"Waiting", meaning:"Prepare well and wait for right timing." },
+  6:  { name:"Conflict", meaning:"Clarify principles. Avoid unnecessary escalation." },
+  7:  { name:"The Army", meaning:"Discipline and coordinated effort bring success." },
+  8:  { name:"Holding Together", meaning:"Unite with trustworthy allies and shared purpose." },
+  9:  { name:"Small Taming", meaning:"Gentle pressure and consistency shape outcomes." },
+  10: { name:"Treading", meaning:"Proceed carefully in high-stakes terrain." },
+  11: { name:"Peace", meaning:"Heaven and earth align. Use harmony productively." },
+  12: { name:"Standstill", meaning:"Blocked flow. Protect values and conserve energy." },
+  13: { name:"Fellowship", meaning:"Open collaboration around clear ideals." },
+  14: { name:"Great Possession", meaning:"Abundance requires stewardship, not ego." },
+  15: { name:"Modesty", meaning:"Humility increases influence and durability." },
+  16: { name:"Enthusiasm", meaning:"Mobilize momentum, but ground it in planning." },
+  17: { name:"Following", meaning:"Adapt intelligently to what is truly moving." },
+  18: { name:"Work on the Decayed", meaning:"Repair old patterns at the root." },
+  19: { name:"Approach", meaning:"Opportunity nears. Act with care and generosity." },
+  20: { name:"Contemplation", meaning:"Observe deeply before deciding your next move." },
+  21: { name:"Biting Through", meaning:"Cut through obstruction with decisive clarity." },
+  22: { name:"Grace", meaning:"Refine presentation without hiding the truth." },
+  23: { name:"Splitting Apart", meaning:"Let go of what can no longer hold." },
+  24: { name:"Return", meaning:"Cycle renews. Come back to essentials." },
+  25: { name:"Innocence", meaning:"Act sincerely, without hidden agenda." },
+  26: { name:"Great Taming", meaning:"Store strength. Timing matters more than force." },
+  27: { name:"Nourishment", meaning:"Feed body, mind, and systems with quality." },
+  28: { name:"Great Preponderance", meaning:"Heavy load. Reinforce weak supports now." },
+  29: { name:"The Abysmal (Water)", meaning:"Face repeated risk with steady courage." },
+  30: { name:"The Clinging (Fire)", meaning:"Clarity and attachment. Illuminate what matters." },
+  31: { name:"Influence", meaning:"Mutual attraction. Lead through resonance, not pressure." },
+  32: { name:"Duration", meaning:"Commit to rhythms that can last." },
+  33: { name:"Retreat", meaning:"Strategic withdrawal protects long-term position." },
+  34: { name:"Great Power", meaning:"Use strength responsibly and with restraint." },
+  35: { name:"Progress", meaning:"Visibility rises. Advance with integrity." },
+  36: { name:"Darkening of the Light", meaning:"Protect your inner fire in hostile conditions." },
+  37: { name:"The Family", meaning:"Roles and responsibilities create order." },
+  38: { name:"Opposition", meaning:"Difference can be productive with clear boundaries." },
+  39: { name:"Obstruction", meaning:"Pause, reroute, and seek support." },
+  40: { name:"Deliverance", meaning:"Release tension and simplify commitments." },
+  41: { name:"Decrease", meaning:"Conscious reduction creates focus and strength." },
+  42: { name:"Increase", meaning:"Direct gains toward meaningful growth." },
+  43: { name:"Breakthrough", meaning:"Declare truth clearly and act decisively." },
+  44: { name:"Coming to Meet", meaning:"A strong influence appears. Stay discerning." },
+  45: { name:"Gathering Together", meaning:"Concentration of people and resources." },
+  46: { name:"Pushing Upward", meaning:"Steady effort brings gradual elevation." },
+  47: { name:"Oppression", meaning:"Constraint tests spirit. Simplify and endure." },
+  48: { name:"The Well", meaning:"Return to the source and maintain it." },
+  49: { name:"Revolution", meaning:"Transform when timing and truth align." },
+  50: { name:"The Cauldron", meaning:"Inner refinement creates shared nourishment." },
+  51: { name:"The Arousing (Thunder)", meaning:"Shock awakens. Respond with composure." },
+  52: { name:"Keeping Still (Mountain)", meaning:"Stop, center, and reset your perspective." },
+  53: { name:"Development", meaning:"Gradual progress builds lasting results." },
+  54: { name:"The Marrying Maiden", meaning:"Limited leverage. Act with realism and dignity." },
+  55: { name:"Abundance", meaning:"Peak intensity. Use the moment wisely." },
+  56: { name:"The Wanderer", meaning:"Stay adaptable and principled in transit." },
+  57: { name:"The Gentle (Wind)", meaning:"Persistent subtle influence outperforms force." },
+  58: { name:"The Joyous (Lake)", meaning:"Open exchange and sincere communication." },
+  59: { name:"Dispersion", meaning:"Dissolve rigidity; reconnect through shared purpose." },
+  60: { name:"Limitation", meaning:"Healthy limits create freedom and reliability." },
+  61: { name:"Inner Truth", meaning:"Align outer action with inner sincerity." },
+  62: { name:"Small Preponderance", meaning:"Favor careful details over grand moves." },
+  63: { name:"After Completion", meaning:"Success reached. Maintain vigilance and balance." },
+  64: { name:"Before Completion", meaning:"Transition phase. Finish with patience and precision." }
+};
+
+function coinLine() {
+  // 2=heads (yang), 3=tails (yin)
+  const toss = () => (Math.random() < 0.5 ? 2 : 3);
+  const s = toss() + toss() + toss();
+  if (s === 6) return { base:0, changing:true, symbol:"━━ x ━━", raw:6 };
+  if (s === 7) return { base:1, changing:false, symbol:"━━━━━━━━", raw:7 };
+  if (s === 8) return { base:0, changing:false, symbol:"━━   ━━", raw:8 };
+  return { base:1, changing:true, symbol:"━━ o ━━", raw:9 };
+}
+
+function trigramInfo(bitsBottomToTop) {
+  const lowerBits = bitsBottomToTop.slice(0,3).join("");
+  const upperBits = bitsBottomToTop.slice(3,6).join("");
+  return {
+    lowerBits,
+    upperBits,
+    lower: trigramByBits[lowerBits],
+    upper: trigramByBits[upperBits]
+  };
+}
+
+function kingWenNumber(bitsBottomToTop) {
+  const { lowerBits, upperBits } = trigramInfo(bitsBottomToTop);
+  const upperIndex = trigramOrder.indexOf(upperBits);
+  const lowerIndex = trigramOrder.indexOf(lowerBits);
+  return kingWenMatrix[upperIndex][lowerIndex];
+}
+
+function formatHex(linesBottomToTop) {
+  return [...linesBottomToTop].reverse().map(l => l.symbol).join("\n");
+}
+
+function metaHTML(number, tri) {
+  const hex = HEXAGRAMS[number];
+  return `
+    <div class="name">#${number} ${hex.name}</div>
+    <span class="pill">Upper: ${tri.upper.name}</span>
+    <span class="pill">Lower: ${tri.lower.name}</span>
+    <span class="pill">Core: ${hex.meaning}</span>
+  `;
+}
+
+function cast() {
+  const q = document.getElementById('q').value.trim();
+  const primary = [];
+  const relating = [];
+
+  for (let i = 0; i < 6; i++) {
+    const line = coinLine();
+    primary.push(line);
+    const flipped = line.changing ? 1 - line.base : line.base;
+    relating.push({ base: flipped, symbol: flipped ? "━━━━━━━━" : "━━   ━━" });
+  }
+
+  const pBits = primary.map(l => l.base);
+  const rBits = relating.map(l => l.base);
+
+  const pTri = trigramInfo(pBits);
+  const rTri = trigramInfo(rBits);
+
+  const pNumber = kingWenNumber(pBits);
+  const rNumber = kingWenNumber(rBits);
+
+  const pHex = HEXAGRAMS[pNumber];
+  const rHex = HEXAGRAMS[rNumber];
+
+  document.getElementById('primaryMeta').innerHTML = metaHTML(pNumber, pTri);
+  document.getElementById('relMeta').innerHTML = metaHTML(rNumber, rTri);
+
+  document.getElementById('primaryHex').textContent = formatHex(primary);
+  document.getElementById('relHex').textContent = formatHex(relating);
+
+  const changingLines = primary
+    .map((l, i) => l.changing ? i + 1 : null)
+    .filter(Boolean);
+
+  const changingText = changingLines.length
+    ? changingLines.join(', ')
+    : 'none';
+
+  const interpretation = `
+    <p><b>Question:</b> ${q || '(none entered)'}</p>
+    <p><b>Primary:</b> #${pNumber} ${pHex.name} - ${pHex.meaning}</p>
+    <p><b>Relating:</b> #${rNumber} ${rHex.name} - ${rHex.meaning}</p>
+    <p><b>Changing lines:</b> ${changingText} (1 = bottom, 6 = top).</p>
+    <p class="small">Reading tip: primary = current pattern. Relating = direction after change.</p>
+  `;
+
+  document.getElementById('interp').innerHTML = interpretation;
+}
+
+document.getElementById('castBtn').addEventListener('click', cast);
+</script>
+</body>
+</html>
