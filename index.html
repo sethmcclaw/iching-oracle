@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>I Ching Oracle</title>
   <style>
-    :root { --bg:#0b1020; --card:#121933; --text:#e9ecf8; --muted:#aab2d5; --accent:#7aa2ff; }
+    :root { --bg:#0b1020; --card:#121933; --text:#e9ecf8; --muted:#aab2d5; --accent:#7aa2ff; --accent2:#7ee0c2; }
     * { box-sizing: border-box; }
     body { margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:linear-gradient(120deg,#0a0f1f,#111a36); color:var(--text); }
     .wrap { max-width: 920px; margin: 0 auto; padding: 22px; }
@@ -14,6 +14,10 @@
     p { color:var(--muted); margin:6px 0; }
     textarea { width:100%; min-height:88px; border-radius:12px; border:1px solid #33407a; background:#0e1530; color:var(--text); padding:12px; font-size:15px; }
     button { border:0; border-radius:10px; padding:12px 16px; background:var(--accent); color:#08102c; font-weight:700; cursor:pointer; margin-top:10px; }
+    button.secondary { background:#2a366d; color:#deebff; border:1px solid #43529b; }
+    button.ghost { background:transparent; color:#deebff; border:1px solid #43529b; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .status { font-size:13px; color:var(--accent2); margin-top:8px; min-height:18px; }
     .hex { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height:1.5; font-size:20px; letter-spacing:1px; }
     .grid { display:grid; grid-template-columns:1fr; gap:14px; }
     @media (min-width: 760px){ .grid{grid-template-columns:1fr 1fr;} }
@@ -22,6 +26,9 @@
     .pill { display:inline-block; border:1px solid #43529b; border-radius:999px; padding:4px 10px; margin-right:8px; margin-bottom:8px; color:#bfd0ff; font-size:13px; }
     .small { font-size:13px; color:#aab2d5; }
     .name { font-size:19px; font-weight:700; color:#eaf0ff; margin-bottom:8px; }
+    .deep h3 { margin:14px 0 8px; font-size:16px; color:#eaf0ff; }
+    .deep ul { margin:8px 0 8px 18px; padding:0; }
+    .deep li { margin:4px 0; color:#c8d2fa; }
   </style>
 </head>
 <body>
@@ -30,8 +37,12 @@
       <h1>I Ching Oracle</h1>
       <p>Ask your question, then cast 6 lines. Uses traditional 3-coin probabilities (6,7,8,9) with changing lines.</p>
       <textarea id="q" placeholder="Type your question here..."></textarea>
-      <br />
-      <button id="castBtn">Cast Hexagram</button>
+      <div class="actions">
+        <button id="castBtn">Cast Hexagram</button>
+        <button id="copyBtn" class="secondary">Copy Share Link</button>
+        <button id="shareXBtn" class="ghost">Share on X</button>
+      </div>
+      <div id="shareStatus" class="status"></div>
       <p class="small">Line legend: yin broken, yang solid, x = old yin (changing), o = old yang (changing).</p>
     </div>
 
@@ -50,7 +61,7 @@
 
     <div class="card">
       <div class="k">Interpretation</div>
-      <div id="interp" class="v"></div>
+      <div id="interp" class="v deep"></div>
     </div>
   </div>
 
@@ -146,14 +157,23 @@ const HEXAGRAMS = {
   64: { name:"Before Completion", meaning:"Transition phase. Finish with patience and precision." }
 };
 
+let lastReading = null;
+
 function coinLine() {
-  // 2=heads (yang), 3=tails (yin)
   const toss = () => (Math.random() < 0.5 ? 2 : 3);
   const s = toss() + toss() + toss();
   if (s === 6) return { base:0, changing:true, symbol:"━━ x ━━", raw:6 };
   if (s === 7) return { base:1, changing:false, symbol:"━━━━━━━━", raw:7 };
   if (s === 8) return { base:0, changing:false, symbol:"━━   ━━", raw:8 };
   return { base:1, changing:true, symbol:"━━ o ━━", raw:9 };
+}
+
+function lineFromRaw(raw) {
+  if (raw === 6) return { base:0, changing:true, symbol:"━━ x ━━", raw:6 };
+  if (raw === 7) return { base:1, changing:false, symbol:"━━━━━━━━", raw:7 };
+  if (raw === 8) return { base:0, changing:false, symbol:"━━   ━━", raw:8 };
+  if (raw === 9) return { base:1, changing:true, symbol:"━━ o ━━", raw:9 };
+  throw new Error("Invalid line value");
 }
 
 function trigramInfo(bitsBottomToTop) {
@@ -188,17 +208,87 @@ function metaHTML(number, tri) {
   `;
 }
 
-function cast() {
-  const q = document.getElementById('q').value.trim();
-  const primary = [];
-  const relating = [];
+function changingTone(count) {
+  if (count === 0) return "No changing lines: this pattern is stable. Your answer is in the core hexagram itself.";
+  if (count <= 2) return "Few changing lines: this is a focused shift. Pay attention to a small leverage point.";
+  if (count <= 4) return "Several changing lines: this is an active transition period. Keep plans adaptive.";
+  return "Many changing lines: expect major flux. Favor principles over fixed tactics.";
+}
 
-  for (let i = 0; i < 6; i++) {
-    const line = coinLine();
-    primary.push(line);
-    const flipped = line.changing ? 1 - line.base : line.base;
-    relating.push({ base: flipped, symbol: flipped ? "━━━━━━━━" : "━━   ━━" });
+function generateDeepInterpretation({ question, pNumber, rNumber, pHex, rHex, pTri, rTri, changingLines }) {
+  const cLinesText = changingLines.length ? changingLines.join(", ") : "none";
+
+  const nowFocus = `Current dynamic is ${pTri.upper.meaning} above ${pTri.lower.meaning}. This suggests you are operating through ${pHex.name.toLowerCase()} energy.`;
+  const shiftFocus = `As lines change, movement goes toward ${rHex.name.toLowerCase()}, with ${rTri.upper.meaning} above ${rTri.lower.meaning}.`;
+
+  return `
+    <p><b>Question:</b> ${question || '(none entered)'}</p>
+
+    <h3>Primary Hexagram - Current Situation</h3>
+    <p><b>#${pNumber} ${pHex.name}:</b> ${pHex.meaning}</p>
+    <p>${nowFocus}</p>
+
+    <h3>Relating Hexagram - Direction of Change</h3>
+    <p><b>#${rNumber} ${rHex.name}:</b> ${rHex.meaning}</p>
+    <p>${shiftFocus}</p>
+
+    <h3>Changing Lines</h3>
+    <p><b>Lines:</b> ${cLinesText} (1 = bottom, 6 = top)</p>
+    <p>${changingTone(changingLines.length)}</p>
+
+    <h3>Practical Guidance</h3>
+    <ul>
+      <li><b>Do now:</b> Act in the spirit of <i>${pHex.name}</i>.</li>
+      <li><b>Adjust toward:</b> The outcome quality of <i>${rHex.name}</i>.</li>
+      <li><b>Watch for:</b> Overreaction during transition. Keep decisions principled and timed.</li>
+    </ul>
+
+    <p class="small">Reading tip: primary = where you are, relating = where it is moving, changing lines = how intense the transition is.</p>
+  `;
+}
+
+function buildShareUrl() {
+  if (!lastReading) return null;
+  const url = new URL(window.location.href);
+  url.searchParams.set('q', lastReading.q || '');
+  url.searchParams.set('cast', lastReading.raw);
+  return url.toString();
+}
+
+function setShareStatus(text) {
+  document.getElementById('shareStatus').textContent = text || '';
+}
+
+async function copyShareLink() {
+  const url = buildShareUrl();
+  if (!url) {
+    setShareStatus('Cast first, then share.');
+    return;
   }
+  try {
+    await navigator.clipboard.writeText(url);
+    setShareStatus('Share link copied.');
+  } catch {
+    setShareStatus('Could not copy automatically. Link: ' + url);
+  }
+}
+
+function shareOnX() {
+  const url = buildShareUrl();
+  if (!url) {
+    setShareStatus('Cast first, then share.');
+    return;
+  }
+  const text = 'My I Ching reading:';
+  const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+  window.open(intent, '_blank', 'noopener,noreferrer');
+}
+
+function renderReading(question, primary) {
+  const relating = primary.map(line => {
+    const flipped = line.changing ? 1 - line.base : line.base;
+    return { base: flipped, symbol: flipped ? "━━━━━━━━" : "━━   ━━" };
+  });
 
   const pBits = primary.map(l => l.base);
   const rBits = relating.map(l => l.base);
@@ -222,22 +312,60 @@ function cast() {
     .map((l, i) => l.changing ? i + 1 : null)
     .filter(Boolean);
 
-  const changingText = changingLines.length
-    ? changingLines.join(', ')
-    : 'none';
+  document.getElementById('interp').innerHTML = generateDeepInterpretation({
+    question,
+    pNumber,
+    rNumber,
+    pHex,
+    rHex,
+    pTri,
+    rTri,
+    changingLines
+  });
 
-  const interpretation = `
-    <p><b>Question:</b> ${q || '(none entered)'}</p>
-    <p><b>Primary:</b> #${pNumber} ${pHex.name} - ${pHex.meaning}</p>
-    <p><b>Relating:</b> #${rNumber} ${rHex.name} - ${rHex.meaning}</p>
-    <p><b>Changing lines:</b> ${changingText} (1 = bottom, 6 = top).</p>
-    <p class="small">Reading tip: primary = current pattern. Relating = direction after change.</p>
-  `;
+  lastReading = {
+    q: question || '',
+    raw: primary.map(l => String(l.raw)).join('')
+  };
 
-  document.getElementById('interp').innerHTML = interpretation;
+  const shareUrl = buildShareUrl();
+  if (shareUrl) history.replaceState({}, '', shareUrl);
+  setShareStatus('Reading updated. Share link ready.');
+}
+
+function cast() {
+  const q = document.getElementById('q').value.trim();
+  const primary = [];
+  for (let i = 0; i < 6; i++) primary.push(coinLine());
+  renderReading(q, primary);
+}
+
+function loadFromURLIfPresent() {
+  const params = new URLSearchParams(window.location.search);
+  const castRaw = params.get('cast');
+  const q = params.get('q') || '';
+
+  if (q) document.getElementById('q').value = q;
+
+  if (!castRaw) return;
+  if (!/^[6789]{6}$/.test(castRaw)) {
+    setShareStatus('Invalid shared cast format.');
+    return;
+  }
+
+  try {
+    const primary = castRaw.split('').map(ch => lineFromRaw(Number(ch)));
+    renderReading(q, primary);
+    setShareStatus('Loaded reading from shared link.');
+  } catch {
+    setShareStatus('Could not load shared reading.');
+  }
 }
 
 document.getElementById('castBtn').addEventListener('click', cast);
+document.getElementById('copyBtn').addEventListener('click', copyShareLink);
+document.getElementById('shareXBtn').addEventListener('click', shareOnX);
+loadFromURLIfPresent();
 </script>
 </body>
 </html>
